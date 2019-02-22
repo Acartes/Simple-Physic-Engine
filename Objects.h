@@ -30,6 +30,7 @@ class Object
 {
 public:
 	Object();
+	Object(Vector2 newPosition, Vector2 newRectData, Color newColor, FrictionType newFriction = None, bool activatePhysics = false);
 	~Object();
 	void Draw();
 	void SetPhysics(bool state);
@@ -40,7 +41,7 @@ public:
 	bool isAffectedByPhysics = false;
 	bool isActive;
 	FrictionType friction;
-	bool stuck;
+	bool stuck = false;
 };
 
 

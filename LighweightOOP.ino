@@ -1,43 +1,19 @@
+ #include "ObjectList.h"
+#include "LinkedList.h"
+#include "BulletData.h"
 #include "Objects.h"
-
-// Visual Micro is in vMicro>General>Tutorial Mode
-// 
-/*
-    Name:       LighweightOOP.ino
-    Created:  2/14/2019 11:48:52 AM
-    Author:     ACARTES-PC\Acartes
-*/
-
-// Define User Types below here or use a .h file
-//
-
-
-
-// Define Function Prototypes that use User Types below here or use a .h file
-//
-
-
-// Define Functions below here or use other .ino or cpp files
-//
-
+#include "LinkedList.h"
 
 // OBJECTS PARAMETERS
 static const int arraySize = 8;
-Object A;
-Object B;
-Object C;
-Object Sticker;
-Object Ceiling;
-Object RightWall;
-Object LeftWall;
-Object Floor;
-
-Object objList[arraySize];
+objectList objList;
+Object* tempObj;
 
 // CHARACTER PARAMETERS
 static const int characterIndex = 0;
 static const int characterVelocityX = 1;
 static const int characterVelocityY = 1;
+static const int controlledIndex = 0;
 
 // PHYSICS PARAMETERS
 static const int gravity = 1;
@@ -45,94 +21,82 @@ static const int max_velocity = 3;
 static const int gravityRefreshFrameRate = 5;
 static const int frictionX = 0;
 static const int frictionY = 0;
-
 int gravityFrameRateCount;
+
+// BULLET PARAMETERS
+list bulletList;
+BulletData* tempBullet;
+int frameCount;
+int bulletIndex;
+bool canReadBulletIndex = true;
 
 // The setup() function runs once each time the micro-controller starts
 void setup()
 {
-	A.position = Vector2(gb.display.width() / 2, 10);
-	A.rectData = Vector2(2, 1);
-	A.color = RED;
-	A.SetPhysics(true);
+	bulletList.createnode(BulletData(0, 1, Vector2(gb.display.width() / 2, 10), 50));
+	bulletList.createnode(BulletData(0, 1, Vector2(gb.display.width() / 4, 10), 100));
+	bulletList.createnode(BulletData(0, 1, Vector2(gb.display.width() - 10, 10), 120));
+	bulletList.createnode(BulletData(0, 1, Vector2(gb.display.width() / 2 + 10, 10), 120));
 
-	B.position = Vector2(gb.display.width() / 2, 15);
-	B.rectData = Vector2(max_velocity + 10, max_velocity + 1);
-	B.color = BLUE;
-	B.friction = Ice;
-
-	C.position = Vector2(gb.display.width() / 2 + 15, 30);
-	C.rectData = Vector2(max_velocity + 20, max_velocity + 1);
-	C.color = BLUE;
-	C.friction = Ice;
-
-	Sticker.position = Vector2(gb.display.width() - 10, 10);
-	Sticker.rectData = Vector2(max_velocity + 15, max_velocity + 40);
-	Sticker.color = ORANGE;
-	Sticker.friction = Stick;
-
-	RightWall.position = Vector2(gb.display.width() - max_velocity - 1, 0);
-	RightWall.rectData = Vector2(max_velocity + 1, gb.display.height());
-	RightWall.color = GREEN;
-
-	LeftWall.position = Vector2(0, 0);
-	LeftWall.rectData = Vector2(max_velocity + 1, gb.display.height());
-	LeftWall.color = GREEN;
-
-	Ceiling.position = Vector2(0, 0);
-	Ceiling.rectData = Vector2(gb.display.width(), max_velocity + 1);
-	Ceiling.color = GREEN;
-
-	Floor.position = Vector2(0, gb.display.height() - max_velocity - 1);
-	Floor.rectData = Vector2(gb.display.width(), max_velocity + 1);
-	Floor.color = GREEN;
-	Floor.friction = Ground;
-
+  objList.createnode(Object(Vector2(gb.display.width() / 2, 10), Vector2(2, 1), RED, None, true)); // CHARACTER
+  objList.createnode(Object(Vector2(gb.display.width() - max_velocity - 1, 0), Vector2(max_velocity + 1, gb.display.height()), GREEN)); // RIGHT WALL
+  objList.createnode(Object(Vector2(0, 0), Vector2(max_velocity + 1, gb.display.height()), GREEN, None)); // LEFT WALL
+  objList.createnode(Object(Vector2(0, 0), Vector2(gb.display.width(), max_velocity + 1), GREEN)); // CEILLING
+  objList.createnode(Object(Vector2(0, gb.display.height() - max_velocity - 1), Vector2(gb.display.width(), max_velocity + 1), GREEN, Ground)); // FLOOR
 	gb.begin();
-
-	objList[0] = A;
-	objList[1] = C;
-	objList[2] = B;
-	objList[3] = Sticker;
-	objList[4] = RightWall;
-	objList[5] = LeftWall;
-	objList[6] = Ceiling;
-	objList[7] = Floor;
 }
 
 // Add the main program code into the continuous loop() function
 void loop()
 {
   while (!gb.update());
+  // gestion du chronomètre (commandes et incrémentation)
   gb.display.clear();
+  CreateBullets();
   Control(characterIndex);
   Gravity();
-  Collision(characterIndex);
+  Collision();
   ApplyDirection();
   Graph();
+  frameCount++;
+}
+
+void CreateBullets() {
+	if (!canReadBulletIndex || bulletList.get_position(bulletIndex) == NULL)
+		return;
+
+	tempBullet = &bulletList.get_position(bulletIndex)->data;
+	
+	if (tempBullet->frameCount <= frameCount) {
+		objList.createnode(Object(Vector2(tempBullet->position.x, tempBullet->position.y), Vector2(2, 2), BLUE, None, true));
+		++bulletIndex;
+		CreateBullets();// recursive check if there are more than one bullet spawning at the same time
+	}
 }
 
 void Control(int controlledIndex) {
-	// Contr�les de la raquette1
+	// Contr�les de la raquette1
+	tempObj = &objList.get_position(controlledIndex)->data;
+
 	if (gb.buttons.repeat(BUTTON_RIGHT, 0)) {
-		objList[controlledIndex].direction += Vector2(characterVelocityX, 0);
-		if (objList[controlledIndex].stuck)
-			objList[controlledIndex].stuck = false;
+		tempObj->direction += Vector2(characterVelocityX, 0);
+		if (tempObj->stuck)
+			tempObj->stuck = false;
 	}
 	if (gb.buttons.repeat(BUTTON_LEFT, 0)) {
-		objList[controlledIndex].direction += Vector2(-characterVelocityX, 0);
-		if (objList[controlledIndex].stuck)
-			objList[controlledIndex].stuck = false;
+		tempObj->direction += Vector2(-characterVelocityX, 0);
+		if (tempObj->stuck)
+			tempObj->stuck = false;
 	}
 	if (gb.buttons.repeat(BUTTON_UP, 0)) {
-		objList[controlledIndex].direction += Vector2(0, -characterVelocityY);
-		if (objList[controlledIndex].stuck)
-			objList[controlledIndex].stuck = false;
+		tempObj->direction += Vector2(0, -characterVelocityY);
+		if (tempObj->stuck)
+			tempObj->stuck = false;
 	}
 	if (gb.buttons.repeat(BUTTON_DOWN, 0)) {
-		objList[controlledIndex].direction += Vector2(0, characterVelocityY);
-		if (objList[controlledIndex].stuck)
-			objList[controlledIndex].stuck = false;
+		tempObj->direction += Vector2(0, characterVelocityY);
+		if (tempObj->stuck)
+			tempObj->stuck = false;
 	}
 }
 
@@ -144,47 +108,56 @@ void Gravity() {
 	else {
 		gravityFrameRateCount = 0;
 	}
-	for (size_t i = 0; i < arraySize; i++)
+	for (size_t i = 0; i < objList.size; i++)
 	{
-		if (objList[i].stuck)
+		tempObj = &objList.get_position(i)->data;
+		if (tempObj->stuck)
 			return;
-		if (objList[i].isAffectedByPhysics && objList[i].direction.y <= max_velocity) {
-			objList[i].direction += Vector2(0, gravity);
+		if (tempObj->isAffectedByPhysics && objList.get_position(i)->data.direction.y <= max_velocity) {
+			tempObj->direction += Vector2(0, gravity);
 		}
 	}
 }
 
-void Collision(int checkedIndex) {
-	for (size_t i = 0; i < arraySize; i++)
+void Collision() {
+	for (size_t i = 0; i < objList.size; i++)
+	{
+		tempObj = &objList.get_position(i)->data;
+		if (tempObj->isAffectedByPhysics) {
+			CheckCollision(i);
+		}
+	}
+}
+
+void CheckCollision(int checkedIndex) {
+	for (size_t i = 0; i < objList.size; i++)
 	{
 		if (checkedIndex != i) {
-			gb.display.setColor(objList[i].color);
+			// CHECK VERTICAL COLLISION WITH TEMP OBJ
+			VerticalCollision(i);
 
-			// CHECK VERTICAL COLLISION
-			VerticalCollision(checkedIndex, i);
-
-			// CHECK HORIZONTAL COLLISION
-			VerticalHorizontalCollision(checkedIndex, i);
+			// CHECK HORIZONTAL COLLISION WITH TEMP OBJ
+			VerticalHorizontalCollision(i);
 		}
 	}
 }
 
-void VerticalCollision(int movingObjIndex, int nonMovingObjIndex) {
-	while (objList[movingObjIndex].direction.y != 0) {
+void VerticalCollision(int nonMovingObjIndex) {
+	while (tempObj->direction.y != 0) {
 		//If there is a collision, then the y direction is reduced by one and the collision is tried again
-		if (CheckMovingYCollision(movingObjIndex, nonMovingObjIndex))
+		if (CheckMovingYCollision(nonMovingObjIndex))
 		{
-			SlowYDown(movingObjIndex);
+			SlowYDown();
 
 			// Collision effect
-			if (objList[movingObjIndex].direction.y == 0) {
-				switch (objList[nonMovingObjIndex].friction)
+			if (tempObj->direction.y == 0) {
+				switch (objList.get_position(nonMovingObjIndex)->data.friction)
 				{
 				case Stick:
-					StickEffect(movingObjIndex);
+					StickEffect();
 					break;
 				case Ground:
-					SlowXDown(movingObjIndex);
+					SlowXDown();
 					// Ground case : reduce horizontal velocity by one
 					break;
 				}
@@ -198,19 +171,19 @@ void VerticalCollision(int movingObjIndex, int nonMovingObjIndex) {
 	}
 }
 
-void VerticalHorizontalCollision(int movingObjIndex, int nonMovingObjIndex) {
-	while (objList[movingObjIndex].direction.x != 0) {
+void VerticalHorizontalCollision(int nonMovingObjIndex) {
+	while (tempObj->direction.x != 0) {
 		// If there is a collision, then the x direction is reduced by one and the collision is tried again
-		if (CheckMovingXYCollision(movingObjIndex, nonMovingObjIndex))
+		if (CheckMovingXYCollision(nonMovingObjIndex))
 		{
-			SlowXDown(movingObjIndex);
+			SlowXDown();
 
 			// Collision effect
-			switch (objList[nonMovingObjIndex].friction)
+			switch (objList.get_position(nonMovingObjIndex)->data.friction)
 			{
 			case Stick:
-				if (objList[movingObjIndex].direction.x == 0)
-					StickEffect(movingObjIndex);
+				if (tempObj->direction.x == 0)
+					StickEffect();
 				break;
 			}
 		}
@@ -222,91 +195,93 @@ void VerticalHorizontalCollision(int movingObjIndex, int nonMovingObjIndex) {
 	}
 }
 
-bool CheckMovingYCollision(int movingObjIndex, int nonMovingObjIndex) {
-	return(gb.collide.rectRect(objList[movingObjIndex].position.x, objList[movingObjIndex].position.y + objList[movingObjIndex].direction.y, objList[movingObjIndex].rectData.x, objList[movingObjIndex].rectData.y,
-		objList[nonMovingObjIndex].position.x, objList[nonMovingObjIndex].position.y, objList[nonMovingObjIndex].rectData.x, objList[nonMovingObjIndex].rectData.y));
+bool CheckMovingYCollision(int nonMovingObjIndex) {
+	return(gb.collide.rectRect(tempObj->position.x, tempObj->position.y + tempObj->direction.y, tempObj->rectData.x, tempObj->rectData.y,
+		objList.get_position(nonMovingObjIndex)->data.position.x, objList.get_position(nonMovingObjIndex)->data.position.y, objList.get_position(nonMovingObjIndex)->data.rectData.x, objList.get_position(nonMovingObjIndex)->data.rectData.y));
 }
 
-bool CheckMovingXYCollision(int movingObjIndex, int nonMovingObjIndex) {
-	return(gb.collide.rectRect(objList[movingObjIndex].position.x + objList[movingObjIndex].direction.x, objList[movingObjIndex].position.y + objList[movingObjIndex].direction.y, objList[movingObjIndex].rectData.x, objList[movingObjIndex].rectData.y,
-		objList[nonMovingObjIndex].position.x, objList[nonMovingObjIndex].position.y, objList[nonMovingObjIndex].rectData.x, objList[nonMovingObjIndex].rectData.y));
+bool CheckMovingXYCollision(int nonMovingObjIndex) {
+	return(gb.collide.rectRect(tempObj->position.x + tempObj->direction.x, tempObj->position.y + tempObj->direction.y, tempObj->rectData.x, tempObj->rectData.y,
+		objList.get_position(nonMovingObjIndex)->data.position.x, objList.get_position(nonMovingObjIndex)->data.position.y, objList.get_position(nonMovingObjIndex)->data.rectData.x, objList.get_position(nonMovingObjIndex)->data.rectData.y));
 }
 
-void StickEffect(int index) {
-	objList[index].stuck = true;
+void StickEffect() {
+	tempObj->stuck = true;
 }
 
-void SlowXDown(int index) {
-	if (objList[index].direction.x > 0)
-		objList[index].direction = Vector2(objList[index].direction.x - 1, objList[index].direction.y);
-	if (objList[index].direction.x < 0)
-		objList[index].direction = Vector2(objList[index].direction.x + 1, objList[index].direction.y);
+void SlowXDown() {
+	if (tempObj->direction.x > 0)
+		tempObj->direction = Vector2(tempObj->direction.x - 1, tempObj->direction.y);
+	if (tempObj->direction.x < 0)
+		tempObj->direction = Vector2(tempObj->direction.x + 1, tempObj->direction.y);
 }
 
-void SlowYDown(int index) {
-	if (objList[index].direction.y > 0)
-		objList[index].direction = Vector2(objList[index].direction.x, objList[index].direction.y - 1);
-	if (objList[index].direction.y < 0)
-		objList[index].direction = Vector2(objList[index].direction.x, objList[index].direction.y + 1);
+void SlowYDown() {
+	if (tempObj->direction.y > 0)
+		tempObj->direction = Vector2(tempObj->direction.x, tempObj->direction.y - 1);
+	if (tempObj->direction.y < 0)
+		tempObj->direction = Vector2(tempObj->direction.x, tempObj->direction.y + 1);
 }
 
 void ApplyDirection() {
-	for (size_t i = 0; i < arraySize; i++)
+	for (size_t i = 0; i < objList.size; i++)
 	{
-		if (objList[i].stuck == true) {
-			objList[i].direction = Vector2(0, 0);
+		tempObj = &objList.get_position(i)->data;
+		if (tempObj->stuck == true) {
+			tempObj->direction = Vector2(0, 0);
 		}
 
-		ClampVelocity(i);
-		ApplySpeed(i);
-		ApplyFriction(i);
+		ClampVelocity();
+		ApplySpeed();
+		ApplyFriction();
 	}
 }
 
-void ClampVelocity(int index) {
-	if (objList[index].direction.x > max_velocity) {
-		objList[index].direction = Vector2(max_velocity, objList[index].direction.y);
+void ClampVelocity() {
+	if (tempObj->direction.x > max_velocity) {
+		tempObj->direction = Vector2(max_velocity, tempObj->direction.y);
 	}
-	if (objList[index].direction.y > max_velocity) {
-		objList[index].direction = Vector2(objList[index].direction.x, max_velocity);
+	if (tempObj->direction.y > max_velocity) {
+		tempObj->direction = Vector2(tempObj->direction.x, max_velocity);
 	}
-	if (objList[index].direction.x < -max_velocity) {
-		objList[index].direction = Vector2(-max_velocity, objList[index].direction.y);
+	if (tempObj->direction.x < -max_velocity) {
+		tempObj->direction = Vector2(-max_velocity, tempObj->direction.y);
 	}
-	if (objList[index].direction.y < -max_velocity) {
-		objList[index].direction = Vector2(objList[index].direction.x, -max_velocity);
+	if (tempObj->direction.y < -max_velocity) {
+		tempObj->direction = Vector2(tempObj->direction.x, -max_velocity);
 	}
 }
 
-void ApplySpeed(int index) {
-	objList[index].position += Vector2(objList[index].direction.x, objList[index].direction.y);
+void ApplySpeed() {
+	tempObj->position += Vector2(tempObj->direction.x, tempObj->direction.y);
 }
 
-void ApplyFriction(int index) {
-	if (objList[index].direction.x != 0) {
-		if (objList[index].direction.x > 0) {
-			objList[index].direction += Vector2(-frictionX, 0);
+void ApplyFriction() {
+	if (tempObj->direction.x != 0) {
+		if (tempObj->direction.x > 0) {
+			tempObj->direction += Vector2(-frictionX, 0);
 		}
-		if (objList[index].direction.x < 0) {
-			objList[index].direction += Vector2(frictionX, 0);
+		if (tempObj->direction.x < 0) {
+			tempObj->direction += Vector2(frictionX, 0);
 		}
 	}
-	if (objList[index].direction.y != 0) {
-		if (objList[index].direction.y > 0) {
-			objList[index].direction += Vector2(0, -frictionY);
+	if (tempObj->direction.y != 0) {
+		if (tempObj->direction.y > 0) {
+			tempObj->direction += Vector2(0, -frictionY);
 		}
-		if (objList[index].direction.y < 0) {
-			objList[index].direction += Vector2(0, frictionY);
+		if (tempObj->direction.y < 0) {
+			tempObj->direction += Vector2(0, frictionY);
 		}
 
 	}
 }
 
 void Graph() {
-	for (size_t i = 0; i < arraySize; i++)
+	for (size_t i = 0; i < objList.size; i++)
 	{
-		gb.display.setColor(objList[i].color);
-		objList[i].Draw();
+		tempObj = &objList.get_position(i)->data;
+		gb.display.setColor(tempObj->color);
+		tempObj->Draw();
 	}
 }
 

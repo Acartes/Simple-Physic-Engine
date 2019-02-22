@@ -57,3 +57,11 @@ Object::Object()
 Object::~Object()
 {
 }
+
+Object::Object(Vector2 newPosition, Vector2 newRectData, Color newColor, FrictionType newFriction, bool activatePhysics) {
+	position = newPosition;
+	rectData = newRectData;
+	color = newColor;
+	friction = newFriction;
+	SetPhysics(activatePhysics);
+}

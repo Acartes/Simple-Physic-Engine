@@ -98,15 +98,23 @@
     <ProjectCapability Include="VisualMicro" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="LighweightOOP.ino">
-      <FileType>CppCode</FileType>
-    </None>
+    <ClCompile Include="LighweightOOP.ino">
+      <FileType>Document</FileType>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BulletData.h" />
+    <ClInclude Include="LinkedList.h" />
+    <ClInclude Include="ObjectList.h" />
     <ClInclude Include="Objects.h" />
+    <ClInclude Include="__vm\.LighweightOOP - Copy.vsarduino.h" />
     <ClInclude Include="__vm\.LighweightOOP.vsarduino.h" />
+    <ClInclude Include="__vm\.SHMUP.vsarduino.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BulletData.cpp" />
+    <ClCompile Include="LinkedList.cpp" />
+    <ClCompile Include="ObjectList.cpp" />
     <ClCompile Include="Objects.cpp" />
   </ItemGroup>
   <PropertyGroup>
